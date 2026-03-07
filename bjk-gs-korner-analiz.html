@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BJK vs GS Korner Analizi</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    background: #0a0a0a;
+    color: #e5e5e5;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+
+  .header {
+    background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 100%;
+    background: linear-gradient(135deg, transparent 50%, rgba(255,255,255,0.02) 50%);
+  }
+  .header-week {
+    font-size: 11px; color: #666; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .header-teams {
+    display: flex; align-items: center; gap: 20px; margin-bottom: 12px;
+  }
+  .header-teams .bjk { font-size: 28px; font-weight: 700; color: #fff; }
+  .header-teams .vs { font-size: 16px; color: #555; }
+  .header-teams .gs { font-size: 28px; font-weight: 700; color: #d4a017; }
+  .header-info { font-size: 12px; color: #888; }
+  .header-badge {
+    margin-top: 12px; display: inline-block;
+    background: #1e3a1e; color: #4ade80;
+    padding: 4px 12px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; letter-spacing: 1px;
+  }
+
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 20px;
+    overflow-x: auto; padding-bottom: 4px;
+  }
+  .tab-btn {
+    padding: 8px 16px; font-size: 11px; font-weight: 400;
+    background: #1a1a1a; color: #888;
+    border: 1px solid #333; border-radius: 6px;
+    cursor: pointer; white-space: nowrap;
+    font-family: inherit; transition: all 0.2s;
+  }
+  .tab-btn.active {
+    font-weight: 700; background: #fff; color: #000; border-color: #fff;
+  }
+
+  .card {
+    background: #111; border: 1px solid #222; border-radius: 10px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 11px; color: #666; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Standings grid */
+  .standings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .standings-grid { grid-template-columns: 1fr; } }
+  .team-card {
+    background: #1a1a1a; padding: 16px; border-radius: 8px;
+  }
+  .team-card.bjk { border-left: 3px solid #fff; }
+  .team-card.gs { border-left: 3px solid #d4a017; }
+  .team-name { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .team-name.gs-color { color: #d4a017; }
+  .team-stat { font-size: 12px; color: #aaa; line-height: 1.8; }
+  .team-stat .label { color: #666; }
+  .team-stat .val { color: #fff; font-weight: 600; }
+  .team-stat .val-gs { color: #d4a017; font-weight: 600; }
+  .team-form { margin-top: 8px; font-size: 11px; }
+  .form-green { color: #4ade80; }
+  .form-yellow { color: #eab308; }
+
+  /* Factor rows */
+  .factor-row {
+    background: #1a1a1a; padding: 12px 16px; border-radius: 6px; margin-bottom: 8px;
+  }
+  .factor-row.up { border-left: 3px solid #22c55e; }
+  .factor-row.down { border-left: 3px solid #ef4444; }
+  .factor-row.neutral { border-left: 3px solid #eab308; }
+  .factor-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+  }
+  .factor-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .factor-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 3px;
+  }
+  .factor-badge.up { background: #1e3a1e; color: #4ade80; }
+  .factor-badge.down { background: #3a1e1e; color: #f87171; }
+  .factor-badge.neutral { background: #3a3a1e; color: #facc15; }
+  .factor-detail { font-size: 11px; color: #888; }
+
+  /* Table */
+  .stats-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .stats-table th {
+    padding: 10px 8px; text-align: left; color: #666; font-weight: 500; border-bottom: 1px solid #333;
+  }
+  .stats-table th.center { text-align: center; }
+  .stats-table th.bjk-col { color: #fff; font-weight: 600; text-align: center; }
+  .stats-table th.gs-col { color: #d4a017; font-weight: 600; text-align: center; }
+  .stats-table td { padding: 8px; border-bottom: 1px solid #1a1a1a; color: #aaa; }
+  .stats-table td.center { text-align: center; }
+  .stats-table td.bjk-val { text-align: center; color: #fff; font-weight: 500; }
+  .stats-table td.gs-val { text-align: center; color: #d4a017; font-weight: 500; }
+  .stats-table td.league-val { text-align: center; color: #666; }
+
+  .insight-text { font-size: 12px; color: #ccc; line-height: 1.8; }
+  .insight-text p { margin-bottom: 8px; }
+  .insight-text strong { color: #fff; }
+
+  /* H2H */
+  .h2h-row {
+    background: #1a1a1a; padding: 12px 16px; border-radius: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .h2h-score { font-size: 13px; font-weight: 600; color: #fff; }
+  .h2h-date { font-size: 11px; color: #666; }
+  .h2h-corners-label { font-size: 11px; color: #888; }
+  .h2h-total { font-size: 18px; font-weight: 700; }
+  .h2h-total.high { color: #22c55e; }
+  .h2h-total.mid { color: #eab308; }
+  .h2h-total.low { color: #f97316; }
+  .h2h-avg-box {
+    margin-top: 12px; padding: 12px; background: #1e1e1e;
+    border-radius: 6px; text-align: center;
+  }
+  .h2h-avg-label { font-size: 11px; color: #888; }
+  .h2h-avg-val { font-size: 20px; font-weight: 700; color: #fff; }
+
+  .lineup-section { margin-bottom: 16px; }
+  .lineup-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .lineup-title.gs-color { color: #d4a017; }
+  .lineup-players { font-size: 11px; color: #aaa; line-height: 1.6; }
+  .lineup-injury { font-size: 10px; color: #ef4444; margin-top: 4px; }
+  .lineup-injury.muted { color: #888; }
+
+  /* Probability */
+  .slider-area { margin-bottom: 8px; display: flex; align-items: center; gap: 16px; }
+  .slider-area input[type=range] { flex: 1; accent-color: #22c55e; }
+  .lambda-val { font-size: 24px; font-weight: 700; color: #fff; min-width: 50px; }
+  .slider-note { font-size: 10px; color: #666; }
+  .slider-note strong { color: #eab308; }
+
+  .prob-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 0; border-bottom: 1px solid #1a1a1a;
+  }
+  .prob-line { width: 80px; font-size: 13px; font-weight: 600; color: #fff; }
+  .prob-bar-wrap {
+    flex: 1; position: relative; height: 24px;
+    background: #1a1a1a; border-radius: 4px; overflow: hidden;
+  }
+  .prob-bar-fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    border-radius: 4px; transition: width 0.3s ease;
+  }
+  .prob-bar-text {
+    position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 11px; font-weight: 600; color: #fff; z-index: 1;
+  }
+  .prob-tag {
+    font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 3px; min-width: 55px; text-align: center;
+  }
+  .prob-under { width: 55px; font-size: 11px; color: #666; text-align: right; }
+
+  .note-box {
+    background: #1a1a0d; border: 1px solid #333300;
+    border-radius: 10px; padding: 16px; margin-top: 16px;
+    font-size: 11px; color: #ccc; line-height: 1.6;
+  }
+  .note-box strong { color: #eab308; }
+
+  /* Verdict */
+  .verdict-card {
+    background: #1a1a1a; padding: 16px; border-radius: 8px; margin-bottom: 12px;
+  }
+  .verdict-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+  }
+  .verdict-line { font-size: 16px; font-weight: 700; color: #fff; }
+  .verdict-prob { font-size: 16px; font-weight: 700; }
+  .verdict-note { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+  .verdict-rec { font-size: 11px; font-weight: 600; color: #eab308; }
+
+  .disclaimer {
+    margin-top: 16px; padding: 16px;
+    background: #1a0d0d; border: 1px solid #330000;
+    border-radius: 10px; font-size: 11px; color: #f87171; line-height: 1.6;
+  }
+
+  .footer {
+    margin-top: 20px; padding: 12px; text-align: center;
+    font-size: 10px; color: #444;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-week">Süper Lig 25. Hafta</div>
+    <div class="header-teams">
+      <span class="bjk">BJK</span>
+      <span class="vs">vs</span>
+      <span class="gs">GS</span>
+    </div>
+    <div class="header-info">7 Mart 2026 - 20:00 | Tüpraş Stadyumu | Hakem: Ozan Ergün (İlk derbisi)</div>
+    <div class="header-badge">KORNER ANALİZİ</div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="overview">Genel Tablo</button>
+    <button class="tab-btn" data-tab="corners">Korner İstatistikleri</button>
+    <button class="tab-btn" data-tab="h2h">H2H & Kadro</button>
+    <button class="tab-btn" data-tab="probability">Olasılık Tablosu</button>
+    <button class="tab-btn" data-tab="verdict">Sonuç</button>
+  </div>
+
+  <!-- ==================== OVERVIEW ==================== -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="card">
+      <div class="card-title">Puan Durumu & Form</div>
+      <div class="standings-grid">
+        <div class="team-card bjk">
+          <div class="team-name">Beşiktaş</div>
+          <div class="team-stat">
+            <div><span class="label">Sıra:</span> <span class="val">4.</span></div>
+            <div><span class="label">Puan:</span> <span class="val">46</span></div>
+            <div><span class="label">G/B/M:</span> 13/7/4</div>
+            <div class="team-form form-green">13 maçtır yenilmez (lig)</div>
+          </div>
+        </div>
+        <div class="team-card gs">
+          <div class="team-name gs-color">Galatasaray</div>
+          <div class="team-stat">
+            <div><span class="label">Sıra:</span> <span class="val-gs">1.</span></div>
+            <div><span class="label">Puan:</span> <span class="val-gs">58</span></div>
+            <div><span class="label">G/B/M:</span> 18/4/2</div>
+            <div class="team-form form-yellow">Lider, 3-4 gün sonra Liverpool CL maçı</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Korner Sayısını Etkileyen Faktörler</div>
+      <div id="factors-container"></div>
+    </div>
+  </div>
+
+  <!-- ==================== CORNERS ==================== -->
+  <div class="tab-content" id="tab-corners">
+    <div class="card">
+      <div class="card-title">2025/26 Sezonu Korner Ortalamaları (22 Maç)</div>
+      <div style="overflow-x:auto">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Metrik</th>
+              <th class="bjk-col">BJK</th>
+              <th class="gs-col">GS</th>
+              <th class="center">Lig Ort.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Maç Başı Toplam Korner (Genel)</td><td class="bjk-val">9.91</td><td class="gs-val">9.14</td><td class="league-val">9.49</td></tr>
+            <tr><td>Ev Sahibi Maç Korner Ort.</td><td class="bjk-val">9.82</td><td class="gs-val">10.25</td><td class="league-val">-</td></tr>
+            <tr><td>Deplasman Maç Korner Ort.</td><td class="bjk-val">10.00</td><td class="gs-val">7.81</td><td class="league-val">-</td></tr>
+            <tr><td>Kazanılan Korner / Maç (son 10)</td><td class="bjk-val">6.2</td><td class="gs-val">-</td><td class="league-val">5.34</td></tr>
+            <tr><td>GS Deplasmanda Korner For</td><td class="bjk-val">-</td><td class="gs-val">4.85</td><td class="league-val">4.14</td></tr>
+            <tr><td>GS Deplasmanda Korner Against</td><td class="bjk-val">-</td><td class="gs-val">3.85</td><td class="league-val">-</td></tr>
+            <tr><td>Over 9.5 Yüzdesi (Genel)</td><td class="bjk-val">45%</td><td class="gs-val">50%</td><td class="league-val">-</td></tr>
+            <tr><td>Over 10.5 Yüzdesi (Genel)</td><td class="bjk-val">36%</td><td class="gs-val">32%</td><td class="league-val">-</td></tr>
+            <tr><td>Over 11.5 Yüzdesi (Genel)</td><td class="bjk-val">18%</td><td class="gs-val">27%</td><td class="league-val">-</td></tr>
+            <tr><td>BJK Ev Over 9.5</td><td class="bjk-val">55%</td><td class="gs-val">-</td><td class="league-val">-</td></tr>
+            <tr><td>BJK Ev Over 10.5</td><td class="bjk-val">36%</td><td class="gs-val">-</td><td class="league-val">-</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Anahtar Çıkarımlar</div>
+      <div class="insight-text">
+        <p>BJK ligde 3. en yüksek korner ortalamasına sahip (9.91). Evde bu 9.82'ye düşüyor ama hala lig ortalamasının (9.49) üstünde.</p>
+        <p>GS deplasmanda ciddi bir korner düşüşü yaşıyor: evde 10.25 olan ortalama deplasmanda 7.81'e iniyor. Bu, GS'nin deplasmanda daha savunmacı oynamasıyla doğrudan ilişkili.</p>
+        <p>GS deplasmanda maç başı 4.85 korner kazanırken 3.85 korner yiyor. BJK evde sürekli baskı kuran bir takım olduğu için bu denge BJK lehine kayabilir.</p>
+        <p>İki verinin ağırlıklı ortalaması: (BJK ev 9.82 + GS deplasman 7.81) / 2 = <strong>~8.8</strong>. Ancak H2H geçmişi (ort. 10.8) ve derbi motivasyonu bunu <strong>~9.5-10.0</strong> bandına çekiyor.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== H2H ==================== -->
+  <div class="tab-content" id="tab-h2h">
+    <div class="card">
+      <div class="card-title">Son 5 BJK-GS Derbisinde Korner Sayıları</div>
+      <div id="h2h-container"></div>
+      <div class="h2h-avg-box">
+        <span class="h2h-avg-label">Son 5 Derbi Korner Ortalaması: </span>
+        <span class="h2h-avg-val">10.8</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Muhtemel 11'ler</div>
+      <div class="lineup-section">
+        <div class="lineup-title">Beşiktaş (Sergen Yalçın)</div>
+        <div class="lineup-players">Ersin; Murillo, Agbadou, Uduokhai, Rıdvan; Ndidi, Orkun; Cerny, Asllani, Olaitan; Oh</div>
+        <div class="lineup-injury">Sakat: El Bilal Touré, Emirhan Topçu</div>
+      </div>
+      <div class="lineup-section">
+        <div class="lineup-title gs-color">Galatasaray (Okan Buruk)</div>
+        <div class="lineup-players">Uğurcan; Sallai, Sanchez, Abdülkerim, Jakobs; Torreira, Lemina; Sane, Sara, Barış; Osimhen</div>
+        <div class="lineup-injury muted">Sakat/Cezalı: Metehan Baltacı (cezalı), Enes Emre Büyük (sakat)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PROBABILITY ==================== -->
+  <div class="tab-content" id="tab-probability">
+    <div class="card">
+      <div class="card-title">Beklenen Toplam Korner (λ) Ayarla</div>
+      <div class="slider-area">
+        <input type="range" id="lambda-slider" min="7" max="13" step="0.1" value="9.8">
+        <span class="lambda-val" id="lambda-display">9.8</span>
+      </div>
+      <div class="slider-note">Kaydırarak farklı senaryolara göre olasılıkları görebilirsin. Benim tahminim: <strong>λ = 9.8</strong></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" id="prob-table-title">Poisson Dağılımına Göre Korner Olasılıkları (λ = 9.8)</div>
+      <div id="prob-container"></div>
+    </div>
+
+    <div class="note-box">
+      <strong>Not:</strong> Poisson modeli korner dağılımı için %100 doğru değildir (kornerlerin variance/mean oranı genelde 1'den büyüktür, yani over-dispersed). Bu yüzden kuyruk olasılıkları (12.5+ üst gibi) gerçekte burada gösterilenden biraz daha yüksek olabilir. Slider'ı kullanarak farklı beklenti senaryolarını test edebilirsin.
+    </div>
+  </div>
+
+  <!-- ==================== VERDICT ==================== -->
+  <div class="tab-content" id="tab-verdict">
+    <div class="card">
+      <div class="card-title">Değerlendirme Özeti</div>
+      <div class="insight-text">
+        <p><strong>Beklenen korner aralığı: 9-11</strong>. İstatistiksel model (λ=9.8) ve bağlamsal faktörler birlikte değerlendirildiğinde bu maçın korner çizgisi 9.5 civarında dengeleniyor.</p>
+        <p>BJK'nin ev sahibi avantajı, 13 maçlık yenilmezlik serisi ve ligin en yüksek korner ortalamasına sahip 3. takımı olması artırıcı faktörler. GS'nin deplasman korner ortalamasının (7.81) ev ortalamasına (10.25) göre dramatik düşmesi ise baskılayıcı.</p>
+        <p>Kritik değişken: GS'nin Liverpool CL maçına 3-4 gün kala ne kadar enerji harcayacağı. Eğer GS savunmacı başlarsa, BJK topla oynayacak ve daha fazla korner üretecek ama toplam belki düşer. Eğer her iki takım da açık oynarsa 12+ korner rahatlıkla olabilir.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Bahis Çizgilerine Göre Değerlendirme (λ=9.8)</div>
+      <div id="verdict-container"></div>
+    </div>
+
+    <div class="disclaimer">
+      <strong>Sorumluluk reddi:</strong> Bu analiz istatistiksel modelleme ve bağlamsal değerlendirmeye dayalıdır. Futbol tahmin edilemezdir, hiçbir model %100 doğru sonuç vermez. Bahis kaybettirme riski her zaman mevcuttur. Kaybetmeyi göze alamayacağın parayı oynama.
+    </div>
+  </div>
+
+  <div class="footer">
+    Kaynaklar: APWin, WinDrawWin, betoncorners, FootyStats, Mackolik, FotMob, over25tips | 7 Mart 2026
+  </div>
+</div>
+
+<script>
+// ========== TAB LOGIC ==========
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ========== POISSON ==========
+function poissonPMF(lambda, k) {
+  let r = Math.exp(-lambda);
+  for (let i = 1; i <= k; i++) r *= lambda / i;
+  return r;
+}
+function poissonCDF(lambda, k) {
+  let s = 0;
+  for (let i = 0; i <= k; i++) s += poissonPMF(lambda, i);
+  return s;
+}
+function getColor(p) {
+  if (p >= 65) return '#22c55e';
+  if (p >= 45) return '#eab308';
+  if (p >= 30) return '#f97316';
+  return '#ef4444';
+}
+function getTag(p) {
+  if (p >= 60) return { t: 'GÜÇLÜ', c: '#22c55e' };
+  if (p >= 45) return { t: 'ORTA', c: '#eab308' };
+  if (p >= 30) return { t: 'RİSKLİ', c: '#f97316' };
+  return { t: 'DÜŞÜK', c: '#ef4444' };
+}
+
+// ========== RENDER FACTORS ==========
+const factors = [
+  { f:"BJK Ev Sahibi Avantajı", i:"Artırıcı", d:"Son 10 sezonda evinde GS'ye 8G 1B 1M. Taraftar baskısı yüksek.", dir:"up" },
+  { f:"BJK 13 Maç Yenilmezlik", i:"Artırıcı", d:"Devre arasından bu yana müthiş form. Ofansif oyun oynuyor.", dir:"up" },
+  { f:"GS Liverpool CL Maçı (3-4 gün sonra)", i:"Azaltıcı (GS için)", d:"Okan Buruk rotasyon yapmasa da enerji yönetimi yapabilir. Daha savunmacı başlayabilir.", dir:"down" },
+  { f:"GS Deplasman Korner Ort. (7.81)", i:"Azaltıcı", d:"GS evde 10.25 ama deplasmanda 7.81. Lig ortalamasının altında.", dir:"down" },
+  { f:"BJK Korner Ortalaması (Lig 3.)", i:"Artırıcı", d:"Lig genelinde en yüksek 3. korner ortalaması (9.91). Evde 9.82.", dir:"up" },
+  { f:"Derbi Gerginliği & İlk Derbici Hakem", i:"Karışık", d:"Derbiler genelde ilk 20 dk temkinli başlar ama açılınca açılır. İlk derbisini yöneten hakem belirsizlik faktörü.", dir:"neutral" },
+  { f:"Ramazan Ayı", i:"Hafif Azaltıcı", d:"Oruçlu oyuncular (varsa) fiziksel olarak hafif düşebilir, tempo azalabilir.", dir:"down" },
+  { f:"H2H Geçmiş (ort. 10.8)", i:"Artırıcı", d:"Son 5 derbide ortalama 10.8 korner. Son 2 maçta 12 ve 13.", dir:"up" },
+  { f:"GS Hücum Gücü (Osimhen, Sane)", i:"Artırıcı", d:"Ligin en golcü takımı. Kontra ataklardan bile korner üretebilir.", dir:"up" },
+  { f:"Puan Farkı (12 puan)", i:"Artırıcı (BJK açısından)", d:"BJK bu maçı kazanmak ZORUNDA, açık oynayacak. GS de puan kaybetmek istemez.", dir:"up" },
+];
+const fc = document.getElementById('factors-container');
+factors.forEach(r => {
+  fc.innerHTML += `
+    <div class="factor-row ${r.dir}">
+      <div class="factor-header">
+        <span class="factor-name">${r.f}</span>
+        <span class="factor-badge ${r.dir}">${r.dir==='up'?'▲':r.dir==='down'?'▼':'◆'} ${r.i}</span>
+      </div>
+      <div class="factor-detail">${r.d}</div>
+    </div>`;
+});
+
+// ========== RENDER H2H ==========
+const h2h = [
+  { dt:"4 Ekim 2025", sc:"GS 1-1 BJK", cr:"4-8", tot:12 },
+  { dt:"28 Ekim 2024", sc:"GS 2-1 BJK", cr:"8-5", tot:13 },
+  { dt:"10 Mart 2024", sc:"BJK 2-1 GS", cr:"7-4", tot:11 },
+  { dt:"28 Ekim 2023", sc:"GS 0-1 BJK", cr:"6-3", tot:9 },
+  { dt:"6 Mart 2023", sc:"BJK 1-0 GS", cr:"5-4", tot:9 },
+];
+const hc = document.getElementById('h2h-container');
+h2h.forEach(m => {
+  const cls = m.tot >= 11 ? 'high' : m.tot >= 9 ? 'mid' : 'low';
+  hc.innerHTML += `
+    <div class="h2h-row">
+      <div>
+        <div class="h2h-score">${m.sc}</div>
+        <div class="h2h-date">${m.dt}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="h2h-corners-label">Korner: ${m.cr}</div>
+        <div class="h2h-total ${cls}">${m.tot}</div>
+      </div>
+    </div>`;
+});
+
+// ========== RENDER PROBABILITIES ==========
+function renderProbs(lambda) {
+  const pc = document.getElementById('prob-container');
+  pc.innerHTML = '';
+  document.getElementById('prob-table-title').textContent = `Poisson Dağılımına Göre Korner Olasılıkları (λ = ${lambda.toFixed(1)})`;
+
+  for (let k = 6; k <= 15; k++) {
+    const overProb = (1 - poissonCDF(lambda, k)) * 100;
+    const underProb = (100 - overProb);
+    const tag = getTag(overProb);
+    const color = getColor(overProb);
+    pc.innerHTML += `
+      <div class="prob-row">
+        <div class="prob-line">${k}.5 Üst</div>
+        <div class="prob-bar-wrap">
+          <div class="prob-bar-fill" style="width:${Math.min(overProb, 100)}%;background:linear-gradient(90deg,${color}44,${color}88)"></div>
+          <div class="prob-bar-text">%${overProb.toFixed(1)}</div>
+        </div>
+        <div class="prob-tag" style="background:${tag.c}22;color:${tag.c}">${tag.t}</div>
+        <div class="prob-under">Alt %${underProb.toFixed(1)}</div>
+      </div>`;
+  }
+}
+
+const slider = document.getElementById('lambda-slider');
+const display = document.getElementById('lambda-display');
+slider.addEventListener('input', () => {
+  const v = parseFloat(slider.value);
+  display.textContent = v.toFixed(1);
+  renderProbs(v);
+});
+renderProbs(9.8);
+
+// ========== RENDER VERDICT ==========
+const verdictLines = [
+  { line:"8.5 Üst", k:8, note:"Güvenli seçenek. GS kapanmadığı sürece 9 korner olma ihtimali yüksek.", rec:"Oranı 1.70+ ise oyna" },
+  { line:"9.5 Üst", k:9, note:"En dengeli çizgi. İstatistik ve bağlam burayı gösteriyor. BJK press yapacak.", rec:"Oranı 1.80+ ise değerli" },
+  { line:"10.5 Üst", k:10, note:"Orta risk. H2H'te son 2 maçta rahatça geçildi ama garantisi yok.", rec:"Oranı 2.10+ ise düşün" },
+  { line:"11.5 Üst", k:11, note:"Yüksek risk. Sadece açık maç senaryosunda gerçekleşir.", rec:"Oranı 2.80+ ise küçük miktar" },
+];
+const vc = document.getElementById('verdict-container');
+verdictLines.forEach(item => {
+  const prob = (1 - poissonCDF(9.8, item.k)) * 100;
+  const color = getColor(prob);
+  vc.innerHTML += `
+    <div class="verdict-card" style="border-left:3px solid ${color}">
+      <div class="verdict-header">
+        <span class="verdict-line">${item.line}</span>
+        <span class="verdict-prob" style="color:${color}">%${prob.toFixed(1)}</span>
+      </div>
+      <div class="verdict-note">${item.note}</div>
+      <div class="verdict-rec">${item.rec}</div>
+    </div>`;
+});
+</script>
+</body>
+</html>
